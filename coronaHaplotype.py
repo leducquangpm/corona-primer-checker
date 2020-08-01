@@ -3,6 +3,7 @@ import os, shutil, glob
 import re
 import sys
 import itertools
+import csv
 from Bio import SeqIO
 def count_gap(text):
     if text.strip() == "": # To take of care of all space input
@@ -16,9 +17,9 @@ def count_gap(text):
 def check_pos(list_primer_pos,ref_d):
     #check order
     for i in range(1,len(list_primer_pos)):
-        
+
         if list_primer_pos[i]-list_primer_pos[i-1]<0:
-            return False,'wrong order'     
+            return False,'wrong order'
     #check length
     d=list_primer_pos[len(list_primer_pos)-1]-list_primer_pos[0]
     if d<ref_d-50 or d>ref_d+50:
@@ -57,8 +58,20 @@ def ReverseComplement(Pattern):
         elif c=='M':
             str=str+"K"
         else:
-            str=str+c  
+            str=str+c
     return str[::-1]
+def combileFastaFile(folder_in,file_out):
+    list_seq=[]
+
+    for root, dirs, files in os.walk(folder_in):
+        for _file in files:
+            if _file.endswith(('.fasta')):
+                #print(str(root)+'/'+_file)
+                for seq in SeqIO.parse(str(root)+'/'+_file,'fasta'):
+                    perc_gap=count_gap(seq.seq)
+                    if perc_gap<=0 and len(seq.seq)>20000:
+                        list_seq.append(seq)
+        SeqIO.write(list_seq,file_out,'fasta')
 def setupdb(db_file):
     """
     make blast database from fasta file in db folder,
@@ -69,15 +82,15 @@ def setupdb(db_file):
     #gisaid_dir='/home/quang/Downloads/gisaid4000'
     #db_file='/mnt/data/coronacheck/SarsCov2_NCBI_785ncbi.fasta'
     #FN_ref_dir='/mnt/data/coronacheck/fpsamples'
-    
+
     # list_seq=[]
-   
+
     # for root, dirs, files in os.walk(FN_ref_dir):
     #     for _file in files:
     #         if _file.endswith(('.fasta')):
     #             #print(str(root)+'/'+_file)
     #             for seq in SeqIO.parse(str(root)+'/'+_file,'fasta'):
-    #                 perc_gap=count_gap(seq.seq)  
+    #                 perc_gap=count_gap(seq.seq)
     #                 if perc_gap<=0 and len(seq.seq)>20000:
     #                    list_seq.append(seq)
     # SeqIO.write(list_seq,db_file,'fasta')
@@ -100,7 +113,7 @@ def setupdbRef(ref_file):
     )
     print (cmd)
     os.system(cmd)
-def blast(sample,db, identity=90, threads=1, mincov=90,dbtype='nucl'):
+def blast(sample,db, identity=80, threads=1, mincov=80,dbtype='nucl'):
     """
     Call blastn with params
     :param query_file (in fasta), db (blast indexed db), number of threads and identity
@@ -142,12 +155,53 @@ def blast(sample,db, identity=90, threads=1, mincov=90,dbtype='nucl'):
     if os.path.exists('temp.fasta'):
         os.remove('temp.fasta')
     return result
-
+def scoreTable(a,b):
+    if a==b:
+        return 1
+    else:
+        return -1
+def FittingAlignment(v,w,sigma):
+    s=[[0 for j in range(len(w)+1)] for i in range(len(v)+1)]
+   
+    s[0][0]=0
+    for i in range(1,len(v)+1):
+        s[i][0]=0
+    for j in range(1,len(w)+1):
+        s[0][j]=s[0][j-1]-sigma
+    for i in range(1,len(v)+1):
+        for j in range(1,len(w)+1):
+            if v[i-1]==w[j-1]:
+                s[i][j]=max(s[i-1][j]-sigma,s[i][j-1]-sigma,s[i-1][j-1]+1)
+            else:
+                s[i][j]=max(s[i-1][j]-sigma,s[i][j-1]-sigma,s[i-1][j-1]-1)
+          
+ 
+    mi=i
+    mj=len(w)
+    for i in range(0,len(v)+1):
+        if s[i][len(w)] >s[mi][len(w)]:
+            mi=i
+    
+   
+    return mi
+def Align(primer,db):
+    
+    list_hit=[]
+    for seq in SeqIO.parse(db,'fasta'): 
+        hit={}     
+        hit['stitle']=seq.description
+        pos=FittingAlignment(str(seq.seq).upper(),primer,5)
+        hit['qstart']=1
+        hit['sstart']=pos-len(primer)
+        hit['qlen']=len(primer)
+        list_hit.append(hit)
+    return list_hit
+    
 def extensePrimerToHaplotype(ref_genome,primers):
     ref_sequence=''
     primers_extend=[]
     for seq in SeqIO.parse(ref_genome,'fasta'):
-        ref_sequence=str(seq.seq).upper() 
+        ref_sequence=str(seq.seq).upper()
     for gp in primers:
         #blast Fo:
         ngp=gp
@@ -160,7 +214,7 @@ def extensePrimerToHaplotype(ref_genome,primers):
                 #get haplotype by position, extend 20nu
                 ht=ref_sequence[int(b['sstart'])-20:int(b['sstart'])+gp['length']+20]
                 ngp['haplotype']=ht
-        
+
         primers_extend.append(ngp)
     return primers_extend
 def collectHaplotypeFromCorpus(primers,db):
@@ -173,7 +227,7 @@ def collectHaplotypeFromCorpus(primers,db):
     name_ht_dict={}
     for gp in primers:
         dict_haplotype[gp['name']]={}
-        
+
         blast_haplotype=blast(gp['haplotype'],db)
         check_list[gp['name']]={}
         for b in blast_haplotype:
@@ -188,7 +242,7 @@ def collectHaplotypeFromCorpus(primers,db):
             ht=ref_sequence[b['stitle']][position:position+int(b['qlen'])]
             check_list[gp['name']][b['stitle']]=float(b['bitscore'])
             if not ht in haplotype_set:
-            
+
                 newname=gp['name']+'-'+str(len(dict_haplotype[gp['name']].keys())+1)
                 dict_haplotype[gp['name']][newname]={}
                 dict_haplotype[gp['name']][newname]['seq']=ht
@@ -207,31 +261,34 @@ def collectFullDomainFromCorpus(primers,db):
         ref_sequence[seq.description]=str(seq.seq).upper()
     dict_domain={}
 
-   
+
     for gp in primers:
         dict_domain[gp['name']]={}
-        
-        blast_haplotype_start=blast(gp['primer'][0]['seq'],db)
-        blast_haplotype_end=blast(gp['primer'][2]['seq'],db)
-        
+
+        #blast_haplotype_start=blast(gp['primer'][0]['seq'],db)
+        #blast_haplotype_end=blast(gp['primer'][2]['seq'],db)
+        blast_haplotype_start=Align(gp['primer'][0]['seq'],db)
+        blast_haplotype_end=Align(gp['primer'][2]['seq'],db)
+
         position_start={}
         position_end={}
         for b in blast_haplotype_start:
             if not b['stitle'] in position_start:
                 position_start[ b['stitle']]=[]
-            
+
             if int(b['qstart'])>1:
                 position_start[b['stitle']].append(int(b['sstart'])-int(b['qstart']))
             else:
                 position_start[b['stitle']].append(int(b['sstart'])-1)
         for b in blast_haplotype_end:
-            
+
             if not b['stitle'] in position_end:
-                position_end[ b['stitle']]=[]           
-            position_end[b['stitle']].append(int(b['sstart'])+int(b['qlen']))         
-    
+                position_end[ b['stitle']]=[]
+            position_end[b['stitle']].append(int(b['sstart'])+int(b['qlen']))
+
 
         for seq in ref_sequence:
+
             correct_p=getGoodCombination(position_start[seq],position_end[seq],gp['length'])
             dict_domain[gp['name']][seq]={}
             ht=''
@@ -243,9 +300,9 @@ def collectFullDomainFromCorpus(primers,db):
                 dict_domain[gp['name']][seq]['seq']=''
                 dict_domain[gp['name']][seq]['start']=-1
                 dict_domain[gp['name']][seq]['end']=-1
-           
-            
-            
+
+
+
     return dict_domain
 def Score(p, q):
     # your code here
@@ -270,7 +327,7 @@ def Score(p, q):
             count=count+1
         else:
             count_miss=count_miss+1
-            list_mm.append(str(i+1)+':'+p[i]+"->"+q[i])   
+            list_mm.append(str(i+1)+':'+p[i]+"->"+q[i])
     if count_miss>3:
         list_mm=[]
         list_mm.append('not found')
@@ -286,7 +343,7 @@ def getMMLong(p, q):
             count=count+1
         else:
             count_miss=count_miss+1
-            list_mm.append(str(i+1)+':'+p[i]+"->"+q[i])   
+            list_mm.append(str(i+1)+':'+p[i]+"->"+q[i])
     if count_miss>5:
         list_mm=[]
         list_mm.append('need alignment')
@@ -302,8 +359,8 @@ def getMM(haplotype,primers):
         for i in range(len(haplotype)-k+1):
             p=haplotype[i:i+k]
             score,list_mm=Score(q,p)
-            if score>best:     
-                best=score          
+            if score>best:
+                best=score
                 mul_s=''
                 for mm in list_mm:
                     mul_s=mul_s+','+mm
@@ -345,7 +402,7 @@ def export_file(dict_haplotype,primers,file_out):
             f.write(gp+'\t'+h+'\t'+dict_haplotype[gp][h]['seq']+'\t'+str(number_haplotype)+'\t'+str(total)+'\t'+str(freq)+'\t'+mm_s+'\t'+dict_haplotype[gp][h]['mm']+'\n')
     f.close()
     f=open('/mnt/data/coronacheck/matrix.tsv','w')
-    f.write(header+'\n')  
+    f.write(header+'\n')
     set_group_haplotype=set()
     statistic_group_haplotype={}
     for sample in statistic_sample:
@@ -365,7 +422,7 @@ def export_file(dict_haplotype,primers,file_out):
         f.write(s+'\t'+group_haplotype+'\n')
     f.close()
     f=open('/mnt/data/coronacheck/group_haplotype.tsv','w')
-    f.write('GROUP HAPLOTYPE\tNUMBER\tFREQUENCY\n')  
+    f.write('GROUP HAPLOTYPE\tNUMBER\tFREQUENCY\n')
     for group in statistic_group_haplotype:
          f.write(group+'\t'+str(len(statistic_group_haplotype[group]))+'\t'+str(len(statistic_group_haplotype[group])/len(statistic_sample))+'\n')
     f.close()
@@ -383,20 +440,20 @@ def export_domain_file(dict_domain,primers,db,file_out):
     f=open(file_out,'w')
 
     f.write('SAMPLE\tGROUP PRIMERS\tSTART\tEND\tSEQUENCE\tMISMATCH')
-    
+
     f.write('\n')
     for seq in SeqIO.parse(db,'fasta'):
-        
+
         for gp in primers:
-            mm_s=getMM(dict_domain[gp['name']][seq.description],gp)
+            mm_s=getMM(dict_domain[gp['name']][seq.description]['seq'],gp)
             f.write(seq.description+'\t'+gp['name']+\
                 '\t'+str(dict_domain[gp['name']][seq.description]['start'])+\
                 '\t'+str(dict_domain[gp['name']][seq.description]['end'])+\
                     '\t'+dict_domain[gp['name']][seq.description]['seq']+\
                         '\t'+mm_s+'\n')
-        
+
     f.close()
-    
+
 def readPrimerFile(primer_file):
     primers=[]
     file1 = open(primer_file, 'r')
@@ -440,21 +497,46 @@ def readPrimerFile(primer_file):
             str=str+c
     return str[::-1]
 
+def readHaplotypeFile(haplotype_file):
+    dict_domain={}
+    with open(haplotype_file) as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter='\t')
 
-
+        line_count = 0
+        for row in csv_reader:
+            if line_count == 0:
+                print(f'Column names are {", ".join(row)}')
+                line_count += 1
+            else:
+                if  not row[1] in dict_domain:
+                    dict_domain[row[1]]={}
+                if not row[0] in dict_domain[row[1]]:
+                    dict_domain[row[1]][row[0]]={}
+                dict_domain[row[1]][row[0]]['seq']=row[4]
+                dict_domain[row[1]][row[0]]['start']=row[2]
+                dict_domain[row[1]][row[0]]['end']=row[3]
+                line_count += 1
+    return dict_domain
 def main(arguments=sys.argv[1:]):
-    #read primer text:
-    db_file='/mnt/data/coronacheck/sarscov2_gisaid6000_1N.fasta'
-    db_file=setupdb(db_file)
-    primers=readPrimerFile('/mnt/data/coronacheck/primerUSA.txt')
-    setupdbRef('/home/quang/Downloads/coronavirus/NC_045512.2.fna')
-    primers_extend=extensePrimerToHaplotype('/home/quang/Downloads/coronavirus/NC_045512.2.fna',primers)
-    dict_haplotype=collectHaplotypeFromCorpus(primers_extend,db_file)
-    #print(ret)
-    export_file(dict_haplotype,primers,'/mnt/data/coronacheck/haplotype_primer_CDC_gisaid6000_1N.tsv')  
+    # #read primer text:
+    # db_file='/mnt/data/coronacheck/sarscov2_gisaid6000_1N.fasta'
+    # db_file=setupdb(db_file)
+    # primers=readPrimerFile('/mnt/data/coronacheck/primerUSA.txt')
+    # setupdbRef('/home/quang/Downloads/coronavirus/NC_045512.2.fna')
+    # primers_extend=extensePrimerToHaplotype('/home/quang/Downloads/coronavirus/NC_045512.2.fna',primers)
+    # dict_haplotype=collectHaplotypeFromCorpus(primers_extend,db_file)
+    # #print(ret)
+    # export_file(dict_haplotype,primers,'/mnt/data/coronacheck/haplotype_primer_CDC_gisaid6000_1N.tsv')
     #calVariantsBwa('/mnt/data/coronacheck/sarscov2.fasta','/mnt/data/coronacheck/primer.fasta','/mnt/data/coronacheck/bwa')
     #dict_domain=collectFullDomainFromCorpus(primers_extend,db_file)
     #export_domain_file(dict_domain,primers,db_file,'/mnt/data/coronacheck/domain_primer_ultramp_gisaid6000_1N.tsv')
-
+    db_file='/mnt/data/coronacheck/BCV_FP_20pcMM.fasta'
+    combileFastaFile('/mnt/data/coronacheck/fpsample20pc',db_file)
+    db_file=setupdb(db_file)
+    primers=readPrimerFile('/mnt/data/coronacheck/primerUltramp.txt')
+    #primers_extend=extensePrimerToHaplotype('/home/quang/Downloads/coronavirus/NC_045512.2.fna',primers)
+    #dict_domain=collectFullDomainFromCorpus(primers,db_file)
+    dict_domain=readHaplotypeFile('/mnt/data/coronacheck/domain_primer_ultramp_20pcMM_bk.tsv')
+    export_domain_file(dict_domain,primers,db_file,'/mnt/data/coronacheck/domain_primer_ultramp_20pcMM.tsv')
 if __name__ == "__main__":
     main()
