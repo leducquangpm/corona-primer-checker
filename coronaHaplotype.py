@@ -162,7 +162,7 @@ def scoreTable(a,b):
         return -1
 def FittingAlignment(v,w,sigma):
     s=[[0 for j in range(len(w)+1)] for i in range(len(v)+1)]
-   
+
     s[0][0]=0
     for i in range(1,len(v)+1):
         s[i][0]=0
@@ -174,21 +174,82 @@ def FittingAlignment(v,w,sigma):
                 s[i][j]=max(s[i-1][j]-sigma,s[i][j-1]-sigma,s[i-1][j-1]+1)
             else:
                 s[i][j]=max(s[i-1][j]-sigma,s[i][j-1]-sigma,s[i-1][j-1]-1)
-          
- 
+
+
     mi=i
     mj=len(w)
     for i in range(0,len(v)+1):
         if s[i][len(w)] >s[mi][len(w)]:
             mi=i
-    
-   
+
+
     return mi
+def GlobalAlignment(v,w,score,sigma):
+    s=[[0 for j in range(len(w)+1)] for i in range(len(v)+1)]
+    bk=[[0 for j in range(len(w)+1)] for i in range(len(v)+1)]
+    s[0][0]=0
+    for i in range(1,len(v)+1):
+        s[i][0]=s[i-1][0]-sigma
+    for j in range(1,len(w)+1):
+        s[0][j]=s[0][j-1]-sigma
+    for i in range(1,len(v)+1):
+        for j in range(1,len(w)+1):
+            # s[i][j]=max(s[i-1][j]-sigma,s[i][j-1]-sigma,s[i-1][j-1]+score[v[i-1]][w[j-1]])
+            if not v[i-1]==w[j-1]:
+                s[i][j]=max(s[i-1][j]-sigma,s[i][j-1]-sigma,s[i-1][j-1]-1)
+            else:
+                s[i][j]=s[i-1][j-1]+score
+            if s[i][j]==s[i-1][j]-sigma:
+                bk[i][j]=1
+            elif s[i][j]==s[i][j-1]-sigma:
+                bk[i][j]=2
+            else:
+                bk[i][j]=3
+    AlignV=''
+    AlignW=''
+    i=len(v)
+    j=len(w)
+    while True:
+        if i>0 and j>0:
+            if bk[i][j] ==3:
+
+                AlignV=v[i-1]+AlignV
+                AlignW=w[j-1]+AlignW
+                i=i-1
+                j=j-1
+            elif bk[i][j] ==1:
+            
+                AlignW='-'+AlignW
+                AlignV=v[i-1]+AlignV
+                i =i-1
+            else:
+            
+                AlignW=w[j-1]+AlignW
+                AlignV='-'+AlignV
+                j =j-1
+        elif i>0:
+            AlignW='-'+AlignW
+            AlignV=v[i-1]+AlignV
+            i =i-1
+        elif j>0:
+            AlignW=w[j-1]+AlignW
+            AlignV='-'+AlignV
+            j =j-1
+        else:
+            break
+    mm=''
+    m=0
+    for i in range(len(AlignV)):
+        if not AlignV[i]==AlignW[i]:
+            mm=mm+str(i+1)+'('+AlignV[i]+'->'+AlignW[i]+')'+';'
+        else:
+            m=m+1
+    return mm,m/len(w)
 def Align(primer,db):
-    
+
     list_hit=[]
-    for seq in SeqIO.parse(db,'fasta'): 
-        hit={}     
+    for seq in SeqIO.parse(db,'fasta'):
+        hit={}
         hit['stitle']=seq.description
         pos=FittingAlignment(str(seq.seq).upper(),primer,5)
         hit['qstart']=1
@@ -196,7 +257,7 @@ def Align(primer,db):
         hit['qlen']=len(primer)
         list_hit.append(hit)
     return list_hit
-    
+
 def extensePrimerToHaplotype(ref_genome,primers):
     ref_sequence=''
     primers_extend=[]
@@ -328,9 +389,9 @@ def Score(p, q):
         else:
             count_miss=count_miss+1
             list_mm.append(str(i+1)+':'+p[i]+"->"+q[i])
-    if count_miss>3:
-        list_mm=[]
-        list_mm.append('not found')
+    #if count_miss>3:
+     #//   list_mm=[]
+     #   list_mm.append('not found')
     return count,list_mm
 def getMMLong(p, q):
     # your code here
@@ -350,12 +411,14 @@ def getMMLong(p, q):
     return count,list_mm
 def getMM(haplotype,primers):
     mm_s=''
+    scores=[]
     for primer in primers['primer']:
         k=len(primer['seq'])
         q=str(primer['seq']).upper()
         best=0
         mul_s=''
         list_m=[]
+
         for i in range(len(haplotype)-k+1):
             p=haplotype[i:i+k]
             score,list_mm=Score(q,p)
@@ -364,10 +427,10 @@ def getMM(haplotype,primers):
                 mul_s=''
                 for mm in list_mm:
                     mul_s=mul_s+','+mm
+        scores.append(best/k)
         if not mul_s=='':
             mm_s=mm_s+primer['type']+'('+mul_s+')'+';'
-
-    return mm_s
+    return mm_s,scores
 
 def export_file(dict_haplotype,primers,file_out):
     #    blast_fields={'qseqid':t[0], 'qstart':t[1], 'qend':t[2], 'qlen':t[3],\
@@ -432,25 +495,40 @@ def export_file(dict_haplotype,primers,file_out):
             f.write('>'+h+'\n')
             f.write(dict_haplotype[gp][h]['seq']+'\n')
     f.close()
-def export_domain_file(dict_domain,primers,db,file_out):
+def export_domain_file(dict_domain,primers,db,file_out,ref_db):
     #    blast_fields={'qseqid':t[0], 'qstart':t[1], 'qend':t[2], 'qlen':t[3],\
     #     'sseqid':t[4], 'sstart':t[5], 'send':t[6], 'slen':t[7], 'sstrand':t[8],\
     #      'length':t[10], 'mismatch':t[11], 'qseq':t[12], 'sseq':t[13],\
     #       'stitle':t[14]}
+    #just get 1 seq
+    ref_seq=''
+    for seq in SeqIO.parse(ref_db,'fasta'):
+        ref_seq=str(seq.seq).upper()
+        break
     f=open(file_out,'w')
 
-    f.write('SAMPLE\tGROUP PRIMERS\tSTART\tEND\tSEQUENCE\tMISMATCH')
+    f.write('SAMPLE\tGROUP PRIMERS\tSTART\tEND\tSEQUENCE\tMISMATCH\tIDENTITY\tIDENT-REF\tMM REF\tMM DES REF')
 
     f.write('\n')
     for seq in SeqIO.parse(db,'fasta'):
 
         for gp in primers:
-            mm_s=getMM(dict_domain[gp['name']][seq.description]['seq'],gp)
-            f.write(seq.description+'\t'+gp['name']+\
+            mm_s,identity=getMM(dict_domain[gp['name']][seq.description]['seq'],gp)
+            isMiss=''
+            idens=''
+            for ide in identity:
+                if ide<0.8:
+                    isMiss='Miss'
+                idens=idens+str(ide)+'\t'
+            #idens=idens[:-1]
+           
+            if not dict_domain[gp['name']][seq.description]['seq']=='':
+                mm_r,mr=checkAmpliconWithRef(dict_domain[gp['name']][seq.description]['seq'],ref_db,ref_seq)
+                f.write(seq.description+'\t'+gp['name']+\
                 '\t'+str(dict_domain[gp['name']][seq.description]['start'])+\
                 '\t'+str(dict_domain[gp['name']][seq.description]['end'])+\
                     '\t'+dict_domain[gp['name']][seq.description]['seq']+\
-                        '\t'+mm_s+'\n')
+                        '\t'+mm_s+'\t'+str(idens)+'\t'+str(mr)+'\t'+mm_r+'\n')
 
     f.close()
 
@@ -496,7 +574,20 @@ def readPrimerFile(primer_file):
         else:
             str=str+c
     return str[::-1]
-
+def checkAmpliconWithRef(amplicon,ref_db, ref_seq):
+    ret=blast(amplicon,ref_db)
+    #get highest score hit
+    bestscore=0
+    best_pos_start=0
+    for h in ret:
+        if float(h['bitscore'])>bestscore:
+            bestscore=float(h['bitscore'])
+            best_pos_start=int(h['sstart'])-int(h['qstart'])
+            best_pos_end=int(h['send'])+(int(h['qlen'])-int(h['qend']))
+    
+    ref_amplicon= ref_seq[best_pos_start:best_pos_end]       
+    mm,m=GlobalAlignment(amplicon,ref_amplicon,1,5)
+    return mm,m
 def readHaplotypeFile(haplotype_file):
     dict_domain={}
     with open(haplotype_file) as csv_file:
@@ -522,7 +613,7 @@ def main(arguments=sys.argv[1:]):
     # db_file='/mnt/data/coronacheck/sarscov2_gisaid6000_1N.fasta'
     # db_file=setupdb(db_file)
     # primers=readPrimerFile('/mnt/data/coronacheck/primerUSA.txt')
-    # setupdbRef('/home/quang/Downloads/coronavirus/NC_045512.2.fna')
+    setupdbRef('/mnt/data/coronacheck/MN908947.3.fasta')
     # primers_extend=extensePrimerToHaplotype('/home/quang/Downloads/coronavirus/NC_045512.2.fna',primers)
     # dict_haplotype=collectHaplotypeFromCorpus(primers_extend,db_file)
     # #print(ret)
@@ -535,8 +626,8 @@ def main(arguments=sys.argv[1:]):
     db_file=setupdb(db_file)
     primers=readPrimerFile('/mnt/data/coronacheck/primerUltramp.txt')
     #primers_extend=extensePrimerToHaplotype('/home/quang/Downloads/coronavirus/NC_045512.2.fna',primers)
-    #dict_domain=collectFullDomainFromCorpus(primers,db_file)
-    dict_domain=readHaplotypeFile('/mnt/data/coronacheck/domain_primer_ultramp_20pcMM_bk.tsv')
-    export_domain_file(dict_domain,primers,db_file,'/mnt/data/coronacheck/domain_primer_ultramp_20pcMM.tsv')
+    dict_domain=collectFullDomainFromCorpus(primers,db_file)
+    #dict_domain=readHaplotypeFile('/mnt/data/coronacheck/domain_primer_ultramp_20pcMM_bk2.tsv')
+    export_domain_file(dict_domain,primers,db_file,'/mnt/data/coronacheck/domain_primer_ultramp_20pcMM.tsv','/mnt/data/coronacheck/MN908947.3.fasta')
 if __name__ == "__main__":
     main()
