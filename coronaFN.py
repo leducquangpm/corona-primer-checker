@@ -54,6 +54,21 @@ def setupdb():
     )
     print (cmd)
     os.system(cmd)
+def setupdbfile(dbfile):
+    """
+    make blast database from fasta file in db folder,
+    :param : fasta file (with folder'folder is the name of db and filename is 'sequences')
+    :return:
+    """
+
+    cmd="makeblastdb -in {path} -title {name} -dbtype {type} -logfile /dev/null".format(
+                            path=dbfile,
+                            name='corona',
+                            type='nucl'
+
+    )
+    print (cmd)
+    os.system(cmd)
 def export_file(sample,db,result,output,dict_cds):
     #    blast_fields={'qseqid':t[0], 'qstart':t[1], 'qend':t[2], 'qlen':t[3],\
     #     'sseqid':t[4], 'sstart':t[5], 'send':t[6], 'slen':t[7], 'sstrand':t[8],\
@@ -108,11 +123,13 @@ def export_file(sample,db,result,output,dict_cds):
         if isPrint:
             #find genes:
             gene=''
-            for key in dict_cds:
-                if s['sseqid'] in key:
-                    for cds in dict_cds[key]:
-                        if int(s['sstart']) >= dict_cds[key][cds]['cds_f'] and int(s['sstart']) <= dict_cds[key][cds]['cds_e']:
-                            gene= dict_cds[key][cds]['gene']
+            if not dict_cds==None:
+               
+                for key in dict_cds:
+                    if s['sseqid'] in key:
+                        for cds in dict_cds[key]:
+                            if int(s['sstart']) >= dict_cds[key][cds]['cds_f'] and int(s['sstart']) <= dict_cds[key][cds]['cds_e']:
+                                gene= dict_cds[key][cds]['gene']
             f.write(s['qseqid']+'\t'+str(s['qstart'])+'\t'+str(s['qend'])+'\t'+str(s['qlen'])+'\t'+\
             s['sseqid']+'\t'+str(s['sstart'])+'\t'+str(s['send'])+'\t'+str(s['slen'])+'\t'+\
             str(s['sstrand'])+'\t'+str(s['length'])+'\t'+str((int(int(s['length'])/int(s['qlen'])*100)))+'\t'+str(s['pident'])+'\t'+str(s['mismatch'])+'\t'+mismatch_c+'\t'+s['qseq']+\
@@ -165,20 +182,7 @@ def blast(sample,db, identity=90, threads=1, mincov=90,dbtype='nucl'):
 
 
     return result
-def ReverseComplement(Pattern):
-    str=""
-    for c in Pattern:
-        if c=="A":
-            str=str+"T"
-        elif c=="T":
-            str=str+"A"
-        elif c=="G":
-            str=str+"C"
-        elif c=="C":
-            str=str+"G"
-        else:
-            str=str+c
-    return str[::-1]
+
 
 def check_pos(list_primer_pos,ref_d):
     #check order
@@ -288,7 +292,7 @@ def readCDSFile(cds_file):
 def main(arguments=sys.argv[1:]):
     #read primer text:
     primers=[]
-    file1 = open('/mnt/data/coronacheck/primerUltramp.txt', 'r')
+    file1 = open('/media/ktht/Store/Quang/bio/primerUltramp.txt', 'r')
     num_primer = int(file1.readline())
 
 
@@ -313,19 +317,20 @@ def main(arguments=sys.argv[1:]):
                 p['seq']=ReverseComplement(p['seq'])
             primer['primer'].append(p)
         primers.append(primer)
-    f=open("/mnt/data/coronacheck/primer.fasta",'w')
+    f=open("/media/ktht/Store/Quang/bio/primer.fasta",'w')
     for p in primers:
         for primer in p['primer']:
             f.write('>'+p['name']+"|"+str(primer['order'])+"\n")
             f.write(primer['seq']+'\n')
     f.close()
     #setupdb()
-    dict_cds=readCDSFile('/home/quang/Downloads/cds_331ncbi.fasta')
-    ret=blast('/mnt/data/coronacheck/primer.fasta',db='/mnt/data/coronacheck/Corona_FP_Ultramp.fasta',mincov=80, identity=80,  threads=4)
+    setupdbfile('/media/ktht/Store/Quang/bio/sequences.fasta')
+    #dict_cds=readCDSFile('/media/ktht/Store/Quang/bio/sequences.fasta')
+    ret=blast('/media/ktht/Store/Quang/bio/primer.fasta',db='/media/ktht/Store/Quang/bio/sequences.fasta',mincov=70, identity=70,  threads=8)
     #print(ret)
 
-    dict_sample_primer=export_file('/mnt/data/coronacheck/primer.fasta','corona',ret,'/mnt/data/coronacheck/blasthit_primer_ultramp_FP_Ultramp.tsv',dict_cds)
-    f=open('/mnt/data/coronacheck/summary.tsv','w')
+    dict_sample_primer=export_file('/media/ktht/Store/Quang/bio/primer.fasta','corona',ret,'/media/ktht/Store/Quang/bio/blasthit_primer_ultramp_FN_gisaid70k.tsv',None)
+    f=open('/media/ktht/Store/Quang/bio/summary.tsv','w')
     header='Sample'
     for p in primers:
             for primer in p['primer']:
