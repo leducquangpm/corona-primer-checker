@@ -1,0 +1,15 @@
+primer	1	103	103	MN908947.2	28323	28425	29875	plus	103	100.000	0	GCACCCCGCATTACGTTTGGTGGACCCTCAGATTCAACTGGCAGTAACCAGAATGGAGAACGCAGTGGGGCGCGATCAAAACAACGTCGGCCCCAAGGTTTAC	GCACCCCGCATTACGTTTGGTGGACCCTCAGATTCAACTGGCAGTAACCAGAATGGAGAACGCAGTGGGGCGCGATCAAAACAACGTCGGCCCCAAGGTTTAC	MN908947.2 Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1, complete genome	204
+primer	28	39	103	MN908947.2	3544	3533	29875	minus	12	100.000	0	TCAGATTCAACT	TCAGATTCAACT	MN908947.2 Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1, complete genome	24.3
+primer	29	39	103	MN908947.2	20994	21004	29875	plus	11	100.000	0	CAGATTCAACT	CAGATTCAACT	MN908947.2 Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1, complete genome	22.3
+primer	10	19	103	MN908947.2	7529	7520	29875	minus	10	100.000	0	ATTACGTTTG	ATTACGTTTG	MN908947.2 Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1, complete genome	20.3
+primer	9	18	103	MN908947.2	15059	15050	29875	minus	10	100.000	0	CATTACGTTT	CATTACGTTT	MN908947.2 Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1, complete genome	20.3
+primer	75	84	103	MN908947.2	15819	15828	29875	plus	10	100.000	0	ATCAAAACAA	ATCAAAACAA	MN908947.2 Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1, complete genome	20.3
+primer	31	40	103	MN908947.2	23811	23820	29875	plus	10	100.000	0	GATTCAACTG	GATTCAACTG	MN908947.2 Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1, complete genome	20.3
+primer	95	103	103	MN908947.2	3159	3151	29875	minus	9	100.000	0	AAGGTTTAC	AAGGTTTAC	MN908947.2 Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1, complete genome	18.3
+primer	95	103	103	MN908947.2	3942	3934	29875	minus	9	100.000	0	AAGGTTTAC	AAGGTTTAC	MN908947.2 Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1, complete genome	18.3
+primer	33	41	103	MN908947.2	6341	6333	29875	minus	9	100.000	0	TTCAACTGG	TTCAACTGG	MN908947.2 Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1, complete genome	18.3
+primer	32	40	103	MN908947.2	13069	13077	29875	plus	9	100.000	0	ATTCAACTG	ATTCAACTG	MN908947.2 Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1, complete genome	18.3
+primer	33	41	103	MN908947.2	14482	14490	29875	plus	9	100.000	0	TTCAACTGG	TTCAACTGG	MN908947.2 Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1, complete genome	18.3
+primer	75	83	103	MN908947.2	17284	17276	29875	minus	9	100.000	0	ATCAAAACA	ATCAAAACA	MN908947.2 Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1, complete genome	18.3
+primer	46	54	103	MN908947.2	17505	17513	29875	plus	9	100.000	0	AACCAGAAT	AACCAGAAT	MN908947.2 Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1, complete genome	18.3
+primer	95	103	103	MN908947.2	20082	20090	29875	plus	9	100.000	0	AAGGTTTAC	AAGGTTTAC	MN908947.2 Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1, complete genome	18.3

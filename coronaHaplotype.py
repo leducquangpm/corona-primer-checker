@@ -4,6 +4,8 @@ import re
 import sys
 import itertools
 import csv
+import argparse
+import json
 from Bio import SeqIO
 def count_gap(text):
     if text.strip() == "": # To take of care of all space input
@@ -358,14 +360,18 @@ def extensePrimerToHaplotype(ref_genome,primers):
 
 def collectHaplotypeFromCorpus(primers,db):
     ref_sequence={}
+    num_seq=0
     for seq in SeqIO.parse(db,'fasta'):
+        num_seq=num_seq+1
         ref_sequence[seq.description]=str(seq.seq).upper()
+        
     dict_haplotype={}
     dict_domain={}
     check_list={}
     haplotype_set=set()
     name_ht_dict={}
     for gp in primers:
+        print('check primer '+gp['name'])
         dict_haplotype[gp['name']]={}
         dict_domain[gp['name']]={}
 
@@ -412,7 +418,7 @@ def collectHaplotypeFromCorpus(primers,db):
                 dict_haplotype[gp['name']][newname]['sample'].append((b['stitle'],position))
             else:
                 dict_haplotype[gp['name']][name_ht_dict[ht]]['sample'].append((b['stitle'],position))
-    return dict_haplotype,dict_domain
+    return dict_haplotype,dict_domain,num_seq
 def collectFullDomainFromCorpus(primers,db):
     ref_sequence={}
     for seq in SeqIO.parse(db,'fasta'):
@@ -545,20 +551,22 @@ def checkAmpliconWithRef(amplicon,ref_region):
     # ref_amplicon= ref_seq[best_pos_start:best_pos_end]       
     p,mm,m=FittingAlignment(ref_region,amplicon,1,1)
     return mm,m
-def export_file(dict_haplotype,primers,file_out):
+def export_file(dict_haplotype,primers,output):
     #    blast_fields={'qseqid':t[0], 'qstart':t[1], 'qend':t[2], 'qlen':t[3],\
     #     'sseqid':t[4], 'sstart':t[5], 'send':t[6], 'slen':t[7], 'sstrand':t[8],\
     #      'length':t[10], 'mismatch':t[11], 'qseq':t[12], 'sseq':t[13],\
     #       'stitle':t[14]}
+    file_out=os.path.join(output,'haplotype_primer.tsv')
     f=open(file_out,'w')
 
     f.write('PRIMER\tHAPLOTYPE\tSEQUENCE\tNUMBER\tTOTAL\tFREQUENCY\tMISMATCH WITH PRIMER\tMISMATCH WITH REF\n')
     for gp in primers:
         f.write(gp['name']+'-ref\t\t'+gp['haplotype']+'\t\t\t\t\t\n')
-    statistic_haplotype={}
+    #statistic_haplotype={}
     statistic_sample={}
     header='SAMPLE ID'
     for gp in dict_haplotype:
+        print('export result '+gp)
         total_set=set()
         header=header+'\t'+gp
         for h in dict_haplotype[gp]:
@@ -577,7 +585,8 @@ def export_file(dict_haplotype,primers,file_out):
                     mm_s,identity=getMM(dict_haplotype[gp][h]['seq'],p)
             f.write(gp+'\t'+h+'\t'+dict_haplotype[gp][h]['seq']+'\t'+str(number_haplotype)+'\t'+str(total)+'\t'+str(freq)+'\t'+mm_s+'\t'+dict_haplotype[gp][h]['mm']+'\n')
     f.close()
-    f=open('/media/ktht/Store/Quang/bio/sample_haplotype.tsv','w')
+    sample_haplotype_file=os.path.join(output,'sample_haplotype.tsv')
+    f=open(sample_haplotype_file,'w')
     f.write(header+'\n')
     set_group_haplotype=set()
     statistic_group_haplotype={}
@@ -597,12 +606,14 @@ def export_file(dict_haplotype,primers,file_out):
             statistic_group_haplotype[group_haplotype[1:]].append(sample)
         f.write(s+'\t'+group_haplotype+'\n')
     f.close()
-    f=open('/media/ktht/Store/Quang/bio/group_haplotype.tsv','w')
+    group_haplotype_file=os.path.join(output,'group_haplotype.tsv')
+    f=open(group_haplotype_file,'w')
     f.write('GROUP HAPLOTYPE\tNUMBER\tFREQUENCY\n')
     for group in statistic_group_haplotype:
          f.write(group+'\t'+str(len(statistic_group_haplotype[group]))+'\t'+str(len(statistic_group_haplotype[group])/len(statistic_sample))+'\n')
     f.close()
-    f=open('/media/ktht/Store/Quang/bio/haplotype.fasta','w')
+    haplotype_file=os.path.join(output,'haplotype.fasta')
+    f=open(haplotype_file,'w')
     for gp in dict_haplotype:
         for h in dict_haplotype[gp]:
             f.write('>'+h+'\n')
@@ -740,11 +751,49 @@ def readHaplotypeFile(haplotype_file):
                 dict_domain[row[1]][row[0]]['end']=row[3]
                 line_count += 1
     return dict_domain
-def multithread(num,dict_domain,primers,db_file):
+def multithread(num,dict_domain,primers,db_file,output,ref):
     print('start thread '+str(num))
-    export_domain_file(dict_domain,primers,db_file,'/media/ktht/Store/Quang/bio/domain_primer_ultramp_gisaid70k_1N'+str(num)+'.tsv','/media/ktht/Store/Quang/bio/MN908947.fasta')
+    outfile=os.path.join(output,'domain_primer_'+str(num)+'.tsv')
+    export_domain_file(dict_domain,primers,db_file,outfile,ref)
     print('end thread '+str(num))
 from multiprocessing import Process
+def pipeline(args):
+    db_file=args.db
+    primer_file=args.primer
+    primers=readPrimerFile(primer_file)
+    setupdbRef(args.ref)
+    primers_extend=extensePrimerToHaplotype(args.ref,primers)
+    dict_haplotype,dict_domain,num_seq=collectHaplotypeFromCorpus(primers_extend,db_file)
+    
+    export_file(dict_haplotype,primers,args.output)
+    with open(f"{args.output}/dump_domain.json", 'w') as outfile:
+        json.dump(dict_domain, outfile)
+    #export_domain_file(dict_domain,primers,db_file,'/media/ktht/Store/Quang/bio/domain_primer_ultramp_gisaid70k_1N.tsv','/media/ktht/Store/Quang/bio/MN908947.fasta')
+    #split db
+    # sp_size=10000
+    count=0
+    num=0
+    # handle = None
+    batch_size=num_seq/args.threads
+    for seq in SeqIO.parse(db_file,'fasta'):
+        if count==0:
+            num=num+1
+            sequence_file_cut=os.path.join(args.output,'seq_'+str(num)+'.fasta')
+            handle = open(sequence_file_cut,"w")
+        SeqIO.write(seq,handle,"fasta")
+        count=count+1
+        if count>batch_size:
+            count=0
+    threads = args.threads
+    procs = []
+    for n in range(threads):
+        sequence_file_cut=os.path.join(args.output,'seq_'+str(num)+'.fasta')
+        db_file_temp=setupdb(sequence_file_cut)
+        proc = Process(target=multithread,args=(n+1,dict_domain,primers,db_file_temp,args.output,args.ref))
+        procs.append(proc)
+        proc.start()
+    for proc in procs:
+        proc.join()
 def main(arguments=sys.argv[1:]):
     # #read primer text:
     # db_file='/media/ktht/Store/Quang/bio/gisaid70k.fasta'
@@ -790,37 +839,22 @@ def main(arguments=sys.argv[1:]):
     # for proc in procs:
     #     proc.join()
 
-    db_file='/media/ktht/Store/Quang/bio/ncbi9k.fasta'
-    db_file_filtered='/media/ktht/Store/Quang/bio/ncbi9k_1N.fasta'
-    db_file=filterFastaFile(db_file,db_file_filtered)
-    db_file=setupdb(db_file)
-    primers=readPrimerFile('/media/ktht/Store/Quang/bio/primerUltramp.txt')
-    setupdbRef('/media/ktht/Store/Quang/bio/MN908947.fasta')
-    primers_extend=extensePrimerToHaplotype('/media/ktht/Store/Quang/bio/MN908947.fasta',primers)
-    dict_haplotype,dict_domain=collectHaplotypeFromCorpus(primers_extend,db_file)
-    export_file(dict_haplotype,primers,'/media/ktht/Store/Quang/bio/haplotype_primer_Ultramp_ncbi9k_1N.tsv')
-    #export_domain_file(dict_domain,primers,db_file,'/media/ktht/Store/Quang/bio/domain_primer_ultramp_gisaid70k_1N.tsv','/media/ktht/Store/Quang/bio/MN908947.fasta')
-    #split db
-    # sp_size=10000
-    count=0
-    num=0
-    # handle = None
-    for seq in SeqIO.parse(db_file,'fasta'):
-        if count==0:
-            num=num+1
-            handle = open('/media/ktht/Store/Quang/bio/sequences_ncbi9k_'+str(num)+".fasta","w")
-        SeqIO.write(seq,handle,"fasta")
-        count=count+1
-        if count==1000:
-            count=0
-    numbs = [1,2,3,4,5,6,7,8,9,10,11]
-    procs = []
-    for n in range(num):
-        db_file_temp=setupdb('/media/ktht/Store/Quang/bio/sequences_ncbi9k_'+str(n+1)+'.fasta')
-        proc = Process(target=multithread,args=(n+1,dict_domain,primers,db_file_temp))
-        procs.append(proc)
-        proc.start()
-    for proc in procs:
-        proc.join()
+    
+    parser = argparse.ArgumentParser(
+        prog='corona_fn_checker',
+        description='Tool for checking False Negative error when testing specified primers with corona')
+    subparsers = parser.add_subparsers(title='sub command', help='sub command help')    
+    
+    run_cmd = subparsers.add_parser(
+        'run', description='Check haplotype status with specified primer', help='Check FN',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    run_cmd.set_defaults(func=pipeline)   
+    run_cmd.add_argument('--primer', help='Primer list in text file',type=str)
+    run_cmd.add_argument('--db', help='Corona db file',type=str)
+    run_cmd.add_argument('--output', help='Output folder', type=str) 
+    run_cmd.add_argument('--ref', help='reference sample', type=str) 
+    run_cmd.add_argument('--threads', help='Number of thread', type=int) 
+    args = parser.parse_args(arguments)
+    return args.func(args)
 if __name__ == "__main__":
     main()

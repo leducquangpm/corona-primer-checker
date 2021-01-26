@@ -2,6 +2,7 @@ import subprocess
 import os, shutil, glob
 import re
 import sys
+import argparse
 from Bio import SeqIO
 def count_gap(text):
     if text.strip() == "": # To take of care of all space input
@@ -26,28 +27,35 @@ def ReverseComplement(Pattern):
         else:
             str=str+c  
     return str[::-1]
-def setupdb():
+def setupdb(args):
     """
     make blast database from fasta file in db folder,
     :param : fasta file (with folder'folder is the name of db and filename is 'sequences')
     :return:
     """
     #seqfile='/mnt/data/coronacheck/sarscov2.fasta'
-    gisaid_dir='/home/quang/Downloads/gisaid4000'
+    #gisaid_dir='/home/quang/Downloads/gisaid4000'
+    input_dir=args.samples
+    output_dir=args.output
+    threadshol_n=args.threadshold
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    print('Setup database...')
     list_seq=[]
    
-    for root, dirs, files in os.walk(gisaid_dir):
+    for root, dirs, files in os.walk(input_dir):
         for _file in files:
             if _file.endswith(('.fasta')):
                 #print(str(root)+'/'+_file)
                 for seq in SeqIO.parse(str(root)+'/'+_file,'fasta'):
                     perc_gap=count_gap(seq.seq)  
-                    if perc_gap<=0 and len(seq.seq)>20000:
+                    if perc_gap<=threadshol_n and len(seq.seq)>20000:
                        list_seq.append(seq)
-    SeqIO.write(list_seq,'/mnt/data/coronacheck/sarscov2_gisad4000_0N.fasta','fasta')
+    outfile=os.path.join(output_dir,'sequences_'+str(threadshol_n)+'N.fasta')
+    SeqIO.write(list_seq,outfile,'fasta')
     print(len(list_seq))
     cmd="makeblastdb -in {path} -title {name} -dbtype {type} -logfile /dev/null".format(
-                            path='/mnt/data/coronacheck/sarscov2_gisad4000_0N.fasta',
+                            path=outfile,
                             name='corona',
                             type='nucl'
 
@@ -288,13 +296,16 @@ def readCDSFile(cds_file):
 
         
     return dic_cds
-
-def main(arguments=sys.argv[1:]):
-    #read primer text:
+def pipeline(args):
+    primer_file=args.primer
+    db=args.db
+    output=args.output
     primers=[]
-    file1 = open('/media/ktht/Store/Quang/bio/primerUltramp.txt', 'r')
+    file1 = open(primer_file, 'r')
     num_primer = int(file1.readline())
-
+    if not os.path.exists(output):
+        os.makedirs(output)
+    print('read primer file')
 
     # Strips the newline character
     for i in range(num_primer):
@@ -317,20 +328,24 @@ def main(arguments=sys.argv[1:]):
                 p['seq']=ReverseComplement(p['seq'])
             primer['primer'].append(p)
         primers.append(primer)
-    f=open("/media/ktht/Store/Quang/bio/primer.fasta",'w')
+    primer_fasta=os.path.join(output,'primer.fasta')
+    f=open(primer_fasta,'w')
     for p in primers:
         for primer in p['primer']:
             f.write('>'+p['name']+"|"+str(primer['order'])+"\n")
             f.write(primer['seq']+'\n')
     f.close()
     #setupdb()
-    setupdbfile('/media/ktht/Store/Quang/bio/sequences.fasta')
+    #setupdbfile('/media/ktht/Store/Quang/bio/sequences.fasta')
     #dict_cds=readCDSFile('/media/ktht/Store/Quang/bio/sequences.fasta')
-    ret=blast('/media/ktht/Store/Quang/bio/primer.fasta',db='/media/ktht/Store/Quang/bio/sequences.fasta',mincov=70, identity=70,  threads=8)
+    print('blast primer with db')
+    ret=blast(primer_fasta,db=db,mincov=70, identity=70,  threads=8)
     #print(ret)
-
-    dict_sample_primer=export_file('/media/ktht/Store/Quang/bio/primer.fasta','corona',ret,'/media/ktht/Store/Quang/bio/blasthit_primer_ultramp_FN_gisaid70k.tsv',None)
-    f=open('/media/ktht/Store/Quang/bio/summary.tsv','w')
+    outfile=os.path.join(output,'blasthit_primer_FN.tsv')
+    print('make sumary file')
+    dict_sample_primer=export_file(primer_fasta,'corona',ret,outfile,None)
+    outfile_summary=os.path.join(output,'summary.tsv')
+    f=open(outfile_summary,'w')
     header='Sample'
     for p in primers:
             for primer in p['primer']:
@@ -341,12 +356,34 @@ def main(arguments=sys.argv[1:]):
         for p in primers:
             for primer in p['primer']:
                 pt=p['name']+'|'+str(primer['order'])
+                print(pt)
+                print(dict_sample_primer[sample])
                 if pt in dict_sample_primer[sample]:
                     s=s+'\t'+str(dict_sample_primer[sample][pt]['mm'])+dict_sample_primer[sample][pt]['c']+dict_sample_primer[sample][pt]['range']
                 else:
                     s=s+'\t'+'not found'
         f.write(s+'\n')
     f.close()
-    #calVariantsBwa('/mnt/data/coronacheck/sarscov2.fasta','/mnt/data/coronacheck/primer.fasta','/mnt/data/coronacheck/bwa')
+def main(arguments=sys.argv[1:]):
+    parser = argparse.ArgumentParser(
+        prog='corona_fn_checker',
+        description='Tool for checking False Negative error when testing specified primers with corona')
+    subparsers = parser.add_subparsers(title='sub command', help='sub command help')    
+    setup_cmd = subparsers.add_parser(
+        'setupdb', description='Collect and filter from corona fasta files', help='Setup corona db file',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    setup_cmd.set_defaults(func=setupdb)   
+    setup_cmd.add_argument('--samples', help='Directory of collection of samples in fasta format',type=str)
+    setup_cmd.add_argument('--output', help='Directory of corona db file',type=str)
+    setup_cmd.add_argument('--threadshold', help='Percentage of N character threadshold in sample', type=int) 
+    run_cmd = subparsers.add_parser(
+        'run', description='Check false postive FN with specified primer', help='Check FN',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    run_cmd.set_defaults(func=pipeline)   
+    run_cmd.add_argument('--primer', help='Primer list in text file',type=str)
+    run_cmd.add_argument('--db', help='Corona db file',type=str)
+    run_cmd.add_argument('--output', help='Output folder', type=str) 
+    args = parser.parse_args(arguments)
+    return args.func(args)
 if __name__ == "__main__":
     main()
