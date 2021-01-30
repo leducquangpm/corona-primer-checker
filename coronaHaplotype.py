@@ -764,10 +764,23 @@ def pipeline(args):
     setupdbRef(args.ref)
     primers_extend=extensePrimerToHaplotype(args.ref,primers)
     dict_haplotype,dict_domain,num_seq=collectHaplotypeFromCorpus(primers_extend,db_file)
-    
-    export_file(dict_haplotype,primers,args.output)
-    with open(f"{args.output}/dump_domain.json", 'w') as outfile:
-        json.dump(dict_domain, outfile)
+    # with open(f"{args.output}/dump_domain.json", 'w') as outfile:
+    #     json.dump(dict_domain, outfile)
+    # with open(f"{args.output}/dump_dict_haplotype.json", 'w') as outfile:
+    #     json.dump(dict_haplotype, outfile)
+    # with open(f"{args.output}/dump_num_seq.json", 'w') as outfile:
+    #     json.dump(num_seq, outfile)
+
+    # export_file(dict_haplotype,primers,args.output)
+    # dict_haplotype={}
+    # dict_domain={}
+    # num_seq=0
+    with open(f"{args.output}/dump_num_seq.json") as infile:
+        num_seq=json.load( infile) 
+    with open(f"{args.output}/dump_domain.json") as infile:
+        dict_domain=json.load( infile) 
+    with open(f"{args.output}/dump_dict_haplotype.json") as infile:
+        dict_haplotype=json.load( infile)    
     #export_domain_file(dict_domain,primers,db_file,'/media/ktht/Store/Quang/bio/domain_primer_ultramp_gisaid70k_1N.tsv','/media/ktht/Store/Quang/bio/MN908947.fasta')
     #split db
     # sp_size=10000
@@ -787,13 +800,15 @@ def pipeline(args):
     threads = args.threads
     procs = []
     for n in range(threads):
-        sequence_file_cut=os.path.join(args.output,'seq_'+str(num)+'.fasta')
-        db_file_temp=setupdb(sequence_file_cut)
-        proc = Process(target=multithread,args=(n+1,dict_domain,primers,db_file_temp,args.output,args.ref))
-        procs.append(proc)
-        proc.start()
+        if(n>=6):
+            sequence_file_cut=os.path.join(args.output,'seq_'+str(n+1)+'.fasta')
+            db_file_temp=setupdb(sequence_file_cut)
+            proc = Process(target=multithread,args=(n+1,dict_domain,primers,db_file_temp,args.output,args.ref))
+            procs.append(proc)
+            proc.start()
     for proc in procs:
         proc.join()
+    
 def main(arguments=sys.argv[1:]):
     # #read primer text:
     # db_file='/media/ktht/Store/Quang/bio/gisaid70k.fasta'
