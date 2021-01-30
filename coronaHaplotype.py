@@ -321,7 +321,7 @@ def GlobalAlignment(v,w,score,sigma):
             m=m+1
     return mm,m/len(w)
 def Align(primer,db):
-    
+
     list_hit=[]
 
 
@@ -332,11 +332,11 @@ def Align(primer,db):
         hit['stitle']=seq.description
         pos,mm,m=FittingAlignment(str(seq.seq).upper(),primer,1,1)
         hit['qstart']=1
-        hit['sstart']=pos-len(primer)
+        hit['sstart']=pos-len(primer)+1
         hit['qlen']=len(primer)
         list_hit.append(hit)
     return list_hit
-    
+
 def extensePrimerToHaplotype(ref_genome,primers):
     ref_sequence=''
     primers_extend=[]
@@ -448,7 +448,7 @@ def collectFullDomainFromCorpus(primers,db):
 
             if not b['stitle'] in position_end:
                 position_end[ b['stitle']]=[]
-            position_end[b['stitle']].append(int(b['sstart'])+int(b['qlen']))
+            position_end[b['stitle']].append(int(b['sstart'])+int(b['qlen'])-1)
 
 
         for seq in ref_sequence:
@@ -458,9 +458,9 @@ def collectFullDomainFromCorpus(primers,db):
             dict_domain[gp['name']][seq]={}
             ht=''
             if len(correct_p)>0:
-                dict_domain[gp['name']][seq]['seq']=ref_sequence[seq][correct_p[0]:correct_p[1]+1]
+                dict_domain[gp['name']][seq]['seq']=ref_sequence[seq][correct_p[0]:correct_p[1]]
                 dict_domain[gp['name']][seq]['start']=correct_p[0]
-                dict_domain[gp['name']][seq]['end']=correct_p[1]+1
+                dict_domain[gp['name']][seq]['end']=correct_p[1]
             else:
                 dict_domain[gp['name']][seq]['seq']=''
                 dict_domain[gp['name']][seq]['start']=-1
@@ -522,7 +522,6 @@ def getMM(haplotype,primers):
         best=0
         mul_s=''
         list_m=[]
-        
         for i in range(len(haplotype)-k+1):
             p=haplotype[i:i+k]
             score,list_mm=Score(q,p)
@@ -534,8 +533,8 @@ def getMM(haplotype,primers):
         scores.append(best/k)
         if not mul_s=='':
             mm_s=mm_s+primer['type']+'('+mul_s+')'+';'
-
     return mm_s,scores
+
 def checkAmpliconWithRef(amplicon,ref_region):
     #ret=blast(amplicon,ref_db)
     #get highest score hit
@@ -558,7 +557,6 @@ def export_file(dict_haplotype,primers,output):
     #       'stitle':t[14]}
     file_out=os.path.join(output,'haplotype_primer.tsv')
     f=open(file_out,'w')
-
     f.write('PRIMER\tHAPLOTYPE\tSEQUENCE\tNUMBER\tTOTAL\tFREQUENCY\tMISMATCH WITH PRIMER\tMISMATCH WITH REF\n')
     for gp in primers:
         f.write(gp['name']+'-ref\t\t'+gp['haplotype']+'\t\t\t\t\t\n')
@@ -619,7 +617,6 @@ def export_file(dict_haplotype,primers,output):
             f.write('>'+h+'\n')
             f.write(dict_haplotype[gp][h]['seq']+'\n')
     f.close()
-
 def export_domain_file(dict_domain,primers,db,file_out,ref_db):
     #    blast_fields={'qseqid':t[0], 'qstart':t[1], 'qend':t[2], 'qlen':t[3],\
     #     'sseqid':t[4], 'sstart':t[5], 'send':t[6], 'slen':t[7], 'sstrand':t[8],\
@@ -633,7 +630,6 @@ def export_domain_file(dict_domain,primers,db,file_out,ref_db):
     f=open(file_out,'w')
 
     f.write('SAMPLE\tGROUP PRIMERS\tSTART\tEND\tREGION\tMISMATCH\tIDENTITY\t\t\t\tAMPLICON\tIDENT-REF\tMM REF\tIS MISS')
-
     f.write('\n')
     set_missAll=set()
     count_sample=0
@@ -643,8 +639,6 @@ def export_domain_file(dict_domain,primers,db,file_out,ref_db):
         for gp in primers:
            
            
-           
-
             if seq.description in dict_domain[gp['name']] and not dict_domain[gp['name']][seq.description]['seq']=='':
                 mm_s,identity=getMM(dict_domain[gp['name']][seq.description]['seq'],gp)
                 isMiss=''
@@ -681,8 +675,6 @@ def export_domain_file(dict_domain,primers,db,file_out,ref_db):
                 isMissAll=False
         if isMissAll==True:
            set_missAll.add(seq.description) 
-
-
     f.close()
     # f=open('/media/ktht/Store/Quang/bio/sample_miss_all_primer'+'.tsv','w')
     # for sample in set_missAll :
@@ -717,20 +709,22 @@ def readPrimerFile(primer_file):
         primers.append(primer)
     return primers
 
-    str=""
-    for c in Pattern:
-        if c=="A":
-            str=str+"T"
-        elif c=="T":
-            str=str+"A"
-        elif c=="G":
-            str=str+"C"
-        elif c=="C":
-            str=str+"G"
-        else:
-            str=str+c
-    return str[::-1]
-
+   
+def checkAmpliconWithRef(amplicon,ref_db, ref_seq):
+    ret=blast(amplicon,ref_db)
+    #get highest score hit
+    bestscore=0
+    best_pos_start=0
+    best_pos_end=0
+    for h in ret:
+        if float(h['bitscore'])>bestscore:
+            bestscore=float(h['bitscore'])
+            best_pos_start=int(h['sstart'])-int(h['qstart'])
+            best_pos_end=int(h['send'])+(int(h['qlen'])-int(h['qend']))
+    
+    ref_amplicon= ref_seq[best_pos_start:best_pos_end]       
+    mm,m=GlobalAlignment(amplicon,ref_amplicon,1,5)
+    return mm,m
 def readHaplotypeFile(haplotype_file):
     dict_domain={}
     with open(haplotype_file) as csv_file:
@@ -869,6 +863,7 @@ def main(arguments=sys.argv[1:]):
     run_cmd.add_argument('--output', help='Output folder', type=str) 
     run_cmd.add_argument('--ref', help='reference sample', type=str) 
     run_cmd.add_argument('--threads', help='Number of thread', type=int) 
+
     args = parser.parse_args(arguments)
     return args.func(args)
 if __name__ == "__main__":
