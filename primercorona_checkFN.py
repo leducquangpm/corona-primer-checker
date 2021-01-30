@@ -97,7 +97,7 @@ def parseHandler(file_xml):
 
 #read primer text:
 primers=[]
-file1 = open('primerUltramp.txt', 'r') 
+file1 = open('/media/ktht/Store/Quang/bio/primerUltramp.txt', 'r') 
 num_primer = int(file1.readline())
   
 
@@ -134,7 +134,7 @@ f.close()
 #simple check
 list_sample=[]
 most_gap=0
-for record in SeqIO.parse("SarsCov2_NCBI_785ncbi.fasta", "fasta"):
+for record in SeqIO.parse("/media/ktht/Store/Quang/bio/ncbi9k.fasta", "fasta"):
     sample={}
     sample['title']=record.description
     sample['seq']=record.seq.upper()
@@ -149,7 +149,7 @@ print(len(list_sample))
 print(most_gap)   
 count_mm={}
 set_mm={}
-file=open('report_FN.txt','w')
+file=open('/media/ktht/Store/Quang/bio/report_FN.txt','w')
 for group in primers: 
     count_match=0 
     count_not_match=0
@@ -251,7 +251,7 @@ for key in set_mm:
         else:
             set_Rd2=set_Rd2&set_mm[key]   
 bag_miss={'E':set_E,'N1':set_N1,'N2':set_N2,'N3':set_N3,'N4':set_N4,'Rd1':set_Rd1,'Rd2':set_Rd2}
-f=open('report_FN_exact_by_group.tab','w')
+f=open('/media/ktht/Store/Quang/bio/report_FN_exact_by_group.tab','w')
 for k in bag_miss:
     for s in bag_miss[k]:
         f.write(k+'\t'+s+'\n')
