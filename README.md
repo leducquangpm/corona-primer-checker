@@ -35,6 +35,6 @@ Detail analysis of primers in nCov samples and some basic statistic about target
    - Reference sample: a ref nCov sequence for checking mismatch of target domain on each samples.
    - Threads: number of CPU core, use for spliting dataset into smaller pieces and run parallel for boosting speed. 
    - Output file: 
-    + domain_primer.tsv: extract target region of each primer on each sample and check mutation on target region.
-    + haplotype_primer.tsv: list all haplotype on target region
-    + sample_haplotype.tsv: mapping sample to haplotype 
+      + domain_primer.tsv: extract target region of each primer on each sample and check mutation on target region.
+      + haplotype_primer.tsv: list all haplotype on target region
+      + sample_haplotype.tsv: mapping sample to haplotype 
