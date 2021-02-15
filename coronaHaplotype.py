@@ -710,21 +710,21 @@ def readPrimerFile(primer_file):
     return primers
 
    
-def checkAmpliconWithRef(amplicon,ref_db, ref_seq):
-    ret=blast(amplicon,ref_db)
-    #get highest score hit
-    bestscore=0
-    best_pos_start=0
-    best_pos_end=0
-    for h in ret:
-        if float(h['bitscore'])>bestscore:
-            bestscore=float(h['bitscore'])
-            best_pos_start=int(h['sstart'])-int(h['qstart'])
-            best_pos_end=int(h['send'])+(int(h['qlen'])-int(h['qend']))
+# def checkAmpliconWithRef(amplicon,ref_db, ref_seq):
+#     ret=blast(amplicon,ref_db)
+#     #get highest score hit
+#     bestscore=0
+#     best_pos_start=0
+#     best_pos_end=0
+#     for h in ret:
+#         if float(h['bitscore'])>bestscore:
+#             bestscore=float(h['bitscore'])
+#             best_pos_start=int(h['sstart'])-int(h['qstart'])
+#             best_pos_end=int(h['send'])+(int(h['qlen'])-int(h['qend']))
     
-    ref_amplicon= ref_seq[best_pos_start:best_pos_end]       
-    mm,m=GlobalAlignment(amplicon,ref_amplicon,1,5)
-    return mm,m
+#     ref_amplicon= ref_seq[best_pos_start:best_pos_end]       
+#     mm,m=GlobalAlignment(amplicon,ref_amplicon,1,5)
+#     return mm,m
 def readHaplotypeFile(haplotype_file):
     dict_domain={}
     with open(haplotype_file) as csv_file:
@@ -758,12 +758,12 @@ def pipeline(args):
     setupdbRef(args.ref)
     primers_extend=extensePrimerToHaplotype(args.ref,primers)
     dict_haplotype,dict_domain,num_seq=collectHaplotypeFromCorpus(primers_extend,db_file)
-    # with open(f"{args.output}/dump_domain.json", 'w') as outfile:
-    #     json.dump(dict_domain, outfile)
-    # with open(f"{args.output}/dump_dict_haplotype.json", 'w') as outfile:
-    #     json.dump(dict_haplotype, outfile)
-    # with open(f"{args.output}/dump_num_seq.json", 'w') as outfile:
-    #     json.dump(num_seq, outfile)
+    with open(f"{args.output}/dump_domain.json", 'w') as outfile:
+        json.dump(dict_domain, outfile)
+    with open(f"{args.output}/dump_dict_haplotype.json", 'w') as outfile:
+        json.dump(dict_haplotype, outfile)
+    with open(f"{args.output}/dump_num_seq.json", 'w') as outfile:
+        json.dump(num_seq, outfile)
 
     # export_file(dict_haplotype,primers,args.output)
     # dict_haplotype={}
