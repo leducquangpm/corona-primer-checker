@@ -13,7 +13,7 @@ Setup dataset: combine all samples sequences into one fasta file, ignore error o
    python coronaFN.py setupdb --samples <folder of samples in fasta files> --output <output folder> --threadshold <percentage of 'N' character>
    ```
    Example:
-    ```
+   ```
    python coronaFN.py setupdb --samples input/samples --output out --threadshold 1
    ```
   Run pipeline:
