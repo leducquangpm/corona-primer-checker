@@ -23,8 +23,8 @@ Setup dataset: combine all samples sequences into one fasta file, ignore error o
    - primer file in text format (see 2 example primer files)
    - nCov samples: output of setupdb command above.
    - Output file: 
-    + summary.txt: quick report presence and absence of primers on each samples
-    + blasthit_primer_FN.tsv: more detail of blast result
+      + summary.txt: quick report presence and absence of primers on each samples
+      + blasthit_primer_FN.tsv: more detail of blast result
   ## CoronaHaplotype.py
 Detail analysis of primers in nCov samples and some basic statistic about target domains of primers.
 ### How to use:
