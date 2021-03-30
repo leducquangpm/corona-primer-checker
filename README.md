@@ -10,15 +10,15 @@ Quick report on presence or absence of primers in nCov samples using BLAST searc
 ### How to use:
 Setup dataset: combine all samples sequences into one fasta file, ignore error or bad sequence, prepare database for blast tool. 
   ```
-   python coronaFN.py setupdb --samples <folder of samples in fasta files> --output <output folder> --threadshold <percentage of 'N' character>
+   python coronaBlastSearchPrimer.py setupdb --samples <folder of samples in fasta files> --output <output folder> --threadshold <percentage of 'N' character>
    ```
    Example:
    ```
-   python coronaFN.py setupdb --samples input/samples --output out --threadshold 1
+   python coronaBlastSearchPrimer.py setupdb --samples input/samples --output out --threadshold 1
    ```
   Run pipeline:
    ```
-    python coronaFN.py run --primer <primer file> --db <nCOv samples> --output <output folder>
+    python coronaBlastSearchPrimer.py run --primer <primer file> --db <nCOv samples> --output <output folder>
    ```
    - primer file in text format (see 2 example primer files)
    - nCov samples: output of setupdb command above.
