@@ -5,8 +5,8 @@
   + Environment: python3.6, Biopython
   + Tools: blastn
 
-## CoronaFN.py
-Quick report on presence or absence of primers in nCov samples.
+## CoronaBlastSearchPrimer.py
+Quick report on presence or absence of primers in nCov samples using BLAST search.
 ### How to use:
 Setup dataset: combine all samples sequences into one fasta file, ignore error or bad sequence, prepare database for blast tool. 
   ```
@@ -25,6 +25,19 @@ Setup dataset: combine all samples sequences into one fasta file, ignore error o
    - Output file: 
       + summary.txt: quick report presence and absence of primers on each samples
       + blasthit_primer_FN.tsv: more detail of blast result
+## CoronaExactSearchPrimer.py
+Quick report on presence or absence of primers in nCov samples using exact search.
+### How to use:
+
+  Run pipeline:
+   ```
+    python coronaExactSearchPrimer.py run --primer <primer file> --db <nCOv samples> --output <output folder>
+   ```
+   - primer file in text format (see 2 example primer files)
+   - nCov samples: output of setupdb command above.
+   - Output file: 
+      + report_FN.txt: list of samples not match with each of primer
+      + report_FN_exact_by_group.tab: list of samples not match with each of primer group 
   ## CoronaHaplotype.py
 Detail analysis of primers in nCov samples and some basic statistic about target domains of primers.
 ### How to use:
