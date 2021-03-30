@@ -79,7 +79,7 @@ def filterFastaFile(fasta_in,file_out):
     for seq in SeqIO.parse(fasta_in,'fasta'):
         perc_gap=count_gap(seq.seq)
         if perc_gap<=1 and len(seq.seq)>20000:
-            
+
             list_seq.append(seq)
     SeqIO.write(list_seq,file_out,'fasta')
     return file_out
@@ -135,7 +135,7 @@ def setupdbRef(ref_file):
     )
     print (cmd)
     os.system(cmd)
-import uuid 
+import uuid
 def blast(sample,db, identity=70, threads=10, mincov=70,dbtype='nucl'):
     """
     Call blastn with params
@@ -227,20 +227,20 @@ def FittingAlignment(v,w,score,sigma):
                 i=i-1
                 j=j-1
             elif bk[i][j] ==1:
-            
+
                 AlignW='-'+AlignW
                 AlignV=v[i-1]+AlignV
                 i =i-1
             else:
-            
+
                 AlignW=w[j-1]+AlignW
                 AlignV='-'+AlignV
                 j =j-1
-        
+
         else:
             break
-          
-    mi=i        
+
+    mi=i
     mm=''
     m=0
     for i in range(len(AlignW)):
@@ -248,7 +248,7 @@ def FittingAlignment(v,w,score,sigma):
             mm=mm+str(i+1)+'('+AlignV[i]+'->'+AlignW[i]+')'+';'
         else:
             m=m+1
-    
+
     count_gap=0
     for i in range(len(AlignV)):
         if not AlignV[i]=='-':
@@ -293,12 +293,12 @@ def GlobalAlignment(v,w,score,sigma):
                 i=i-1
                 j=j-1
             elif bk[i][j] ==1:
-            
+
                 AlignW='-'+AlignW
                 AlignV=v[i-1]+AlignV
                 i =i-1
             else:
-            
+
                 AlignW=w[j-1]+AlignW
                 AlignV='-'+AlignV
                 j =j-1
@@ -327,8 +327,8 @@ def Align(primer,db):
 
 
 
-    for seq in SeqIO.parse(db,'fasta'): 
-        hit={}     
+    for seq in SeqIO.parse(db,'fasta'):
+        hit={}
         hit['stitle']=seq.description
         pos,mm,m=FittingAlignment(str(seq.seq).upper(),primer,1,1)
         hit['qstart']=1
@@ -364,7 +364,7 @@ def collectHaplotypeFromCorpus(primers,db):
     for seq in SeqIO.parse(db,'fasta'):
         num_seq=num_seq+1
         ref_sequence[seq.description]=str(seq.seq).upper()
-        
+
     dict_haplotype={}
     dict_domain={}
     check_list={}
@@ -379,7 +379,7 @@ def collectHaplotypeFromCorpus(primers,db):
         check_list[gp['name']]={}
         for b in blast_haplotype:
             ht=''
-          
+
             if b['stitle'] in check_list[gp['name']]:
                if check_list[gp['name']][b['stitle']]>float(b['bitscore']):
                     continue
@@ -387,24 +387,24 @@ def collectHaplotypeFromCorpus(primers,db):
             if int(b['qstart'])>1:
                 position=int(b['sstart'])-int(b['qstart'])
             region=ref_sequence[b['stitle']][position:position+int(b['qlen'])]
-            
+
             dict_domain[gp['name']][b['stitle']]={}
             ht,ps,pe=getAMP(region,gp['primer'][0]['seq'],gp['primer'][2]['seq'])
-            
+
             dict_domain[gp['name']][b['stitle']]['seq']=ht
-            
+
             dict_domain[gp['name']][b['stitle']]['start']=position+ps+1
             dict_domain[gp['name']][b['stitle']]['end']=position+int(b['qlen'])-pe+1
-            if ht=='': 
+            if ht=='':
                 ht=region
                 dict_domain[gp['name']][b['stitle']]['seq']=region
-            
+
                 dict_domain[gp['name']][b['stitle']]['start']=position+1
                 dict_domain[gp['name']][b['stitle']]['end']=position+int(b['qlen'])+1
-            
-            
+
+
             check_list[gp['name']][b['stitle']]=float(b['bitscore'])
-            
+
             if not ht in haplotype_set:
 
                 newname=gp['name']+'-'+str(len(dict_haplotype[gp['name']].keys())+1)
@@ -546,8 +546,8 @@ def checkAmpliconWithRef(amplicon,ref_region):
     #         bestscore=float(h['bitscore'])
     #         best_pos_start=int(h['sstart'])-int(h['qstart'])
     #         best_pos_end=int(h['send'])+(int(h['qlen'])-int(h['qend']))
-    
-    # ref_amplicon= ref_seq[best_pos_start:best_pos_end]       
+
+    # ref_amplicon= ref_seq[best_pos_start:best_pos_end]
     p,mm,m=FittingAlignment(ref_region,amplicon,1,1)
     return mm,m
 def export_file(dict_haplotype,primers,output):
@@ -637,8 +637,8 @@ def export_domain_file(dict_domain,primers,db,file_out,ref_db):
         count_sample=count_sample+1
         isMissAll=True
         for gp in primers:
-           
-           
+
+
             if seq.description in dict_domain[gp['name']] and not dict_domain[gp['name']][seq.description]['seq']=='':
                 mm_s,identity=getMM(dict_domain[gp['name']][seq.description]['seq'],gp)
                 isMiss=''
@@ -646,7 +646,7 @@ def export_domain_file(dict_domain,primers,db,file_out,ref_db):
                 for ide in identity:
                     if ide<0.8:
                         isMiss='Miss'
-                    
+
                     idens=idens+str(ide)+'\t'
                 amplicon,ps,pe=getAMP(dict_domain[gp['name']][seq.description]['seq'],gp['primer'][1]['seq'],gp['primer'][2]['seq'])
                 if not amplicon=='':
@@ -663,7 +663,7 @@ def export_domain_file(dict_domain,primers,db,file_out,ref_db):
                     '\t'+str(dict_domain[gp['name']][seq.description]['end'])+\
                     '\t'+dict_domain[gp['name']][seq.description]['seq']+\
                         '\t'+mm_s+'\t'+str(idens)+'\t'+amplicon+'\t\t\tMiss\n')
-                    
+
             else:
                  isMiss='Miss'
                  f.write(seq.description+'\t'+gp['name']+\
@@ -674,7 +674,7 @@ def export_domain_file(dict_domain,primers,db,file_out,ref_db):
             if not isMiss=='Miss':
                 isMissAll=False
         if isMissAll==True:
-           set_missAll.add(seq.description) 
+           set_missAll.add(seq.description)
     f.close()
     # f=open('/media/ktht/Store/Quang/bio/sample_miss_all_primer'+'.tsv','w')
     # for sample in set_missAll :
@@ -709,7 +709,7 @@ def readPrimerFile(primer_file):
         primers.append(primer)
     return primers
 
-   
+
 # def checkAmpliconWithRef(amplicon,ref_db, ref_seq):
 #     ret=blast(amplicon,ref_db)
 #     #get highest score hit
@@ -721,8 +721,8 @@ def readPrimerFile(primer_file):
 #             bestscore=float(h['bitscore'])
 #             best_pos_start=int(h['sstart'])-int(h['qstart'])
 #             best_pos_end=int(h['send'])+(int(h['qlen'])-int(h['qend']))
-    
-#     ref_amplicon= ref_seq[best_pos_start:best_pos_end]       
+
+#     ref_amplicon= ref_seq[best_pos_start:best_pos_end]
 #     mm,m=GlobalAlignment(amplicon,ref_amplicon,1,5)
 #     return mm,m
 def readHaplotypeFile(haplotype_file):
@@ -758,6 +758,8 @@ def pipeline(args):
     setupdbRef(args.ref)
     primers_extend=extensePrimerToHaplotype(args.ref,primers)
     dict_haplotype,dict_domain,num_seq=collectHaplotypeFromCorpus(primers_extend,db_file)
+    if not os.path.exists(args.output):
+        os.makedirs(args.output)
     with open(f"{args.output}/dump_domain.json", 'w') as outfile:
         json.dump(dict_domain, outfile)
     with open(f"{args.output}/dump_dict_haplotype.json", 'w') as outfile:
@@ -765,16 +767,16 @@ def pipeline(args):
     with open(f"{args.output}/dump_num_seq.json", 'w') as outfile:
         json.dump(num_seq, outfile)
 
-    # export_file(dict_haplotype,primers,args.output)
+    export_file(dict_haplotype,primers,args.output)
     # dict_haplotype={}
     # dict_domain={}
     # num_seq=0
     with open(f"{args.output}/dump_num_seq.json") as infile:
-        num_seq=json.load( infile) 
+        num_seq=json.load( infile)
     with open(f"{args.output}/dump_domain.json") as infile:
-        dict_domain=json.load( infile) 
+        dict_domain=json.load( infile)
     with open(f"{args.output}/dump_dict_haplotype.json") as infile:
-        dict_haplotype=json.load( infile)    
+        dict_haplotype=json.load( infile)
     #export_domain_file(dict_domain,primers,db_file,'/media/ktht/Store/Quang/bio/domain_primer_ultramp_gisaid70k_1N.tsv','/media/ktht/Store/Quang/bio/MN908947.fasta')
     #split db
     # sp_size=10000
@@ -794,15 +796,14 @@ def pipeline(args):
     threads = args.threads
     procs = []
     for n in range(threads):
-        if(n>=6):
-            sequence_file_cut=os.path.join(args.output,'seq_'+str(n+1)+'.fasta')
-            db_file_temp=setupdb(sequence_file_cut)
-            proc = Process(target=multithread,args=(n+1,dict_domain,primers,db_file_temp,args.output,args.ref))
-            procs.append(proc)
-            proc.start()
+        sequence_file_cut=os.path.join(args.output,'seq_'+str(n+1)+'.fasta')
+        db_file_temp=setupdb(sequence_file_cut)
+        proc = Process(target=multithread,args=(n+1,dict_domain,primers,db_file_temp,args.output,args.ref))
+        procs.append(proc)
+        proc.start()
     for proc in procs:
         proc.join()
-    
+
 def main(arguments=sys.argv[1:]):
     # #read primer text:
     # db_file='/media/ktht/Store/Quang/bio/gisaid70k.fasta'
@@ -848,21 +849,21 @@ def main(arguments=sys.argv[1:]):
     # for proc in procs:
     #     proc.join()
 
-    
+
     parser = argparse.ArgumentParser(
         prog='corona_fn_checker',
         description='Tool for checking False Negative error when testing specified primers with corona')
-    subparsers = parser.add_subparsers(title='sub command', help='sub command help')    
-    
+    subparsers = parser.add_subparsers(title='sub command', help='sub command help')
+
     run_cmd = subparsers.add_parser(
         'run', description='Check haplotype status with specified primer', help='Check FN',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    run_cmd.set_defaults(func=pipeline)   
+    run_cmd.set_defaults(func=pipeline)
     run_cmd.add_argument('--primer', help='Primer list in text file',type=str)
     run_cmd.add_argument('--db', help='Corona db file',type=str)
-    run_cmd.add_argument('--output', help='Output folder', type=str) 
-    run_cmd.add_argument('--ref', help='reference sample', type=str) 
-    run_cmd.add_argument('--threads', help='Number of thread', type=int) 
+    run_cmd.add_argument('--output', help='Output folder', type=str)
+    run_cmd.add_argument('--ref', help='reference sample', type=str)
+    run_cmd.add_argument('--threads', help='Number of thread', type=int)
 
     args = parser.parse_args(arguments)
     return args.func(args)
